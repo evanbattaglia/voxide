@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+tmpfile="$1"
+bundle exec rubocop|grep '/.*:[0-9][0-9]*:[0-9][0-9]*: [CWE]:'|grep "${2:-.}" > "$tmpfile"
+exit $?

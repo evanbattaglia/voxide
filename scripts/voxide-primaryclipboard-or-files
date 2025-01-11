@@ -1,0 +1,20 @@
+#!/usr/bin/env sh
+
+# Shim for 'primary cliboard' -- for X11, where
+# there are multiple clipboards, this is the
+# middle mouse button. For other platforms this
+# just defaults to the regular clipboard.
+
+# If run with any arguments, passes those through to the command
+if [[ -n "$1" ]]; then
+  voxide-args-to-lines "$@"
+  exit 0
+fi
+
+if which termux-clipboard-get >/dev/null 2>/dev/null; then
+  termux-clipboard-get "$@"
+elif which pbpaste >/dev/null 2>/dev/null; then
+  pbpaste "$@"
+else
+  xclip -out "$@"
+fi

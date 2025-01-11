@@ -1,0 +1,271 @@
+# These regex replacements are applied to filenames until a file is found that
+# exists.
+transforms = [
+  ['^file:/+', '/'],
+  ["\n", ":"],
+  [':File [0-9]+ of.*', ''], # strip gerrit stuff
+  ['^File (.*):$', '$1'], # more gerrit
+  ['#[0-9]{1,5}$', ":#{$1}"], # /path/to/file#1234
+
+  # Line numbers. Extract 123 from foo.rs:123 into "lineno".
+  # A line number "123" extracted into special <lineno> will
+  # be opened with an extra argument "+123" (e.g. nvim foo.rs +123).
+  # The "+" is currently hard-coded, see TODO in main.rs
+  [':(?<lineno>\d*).*', ''],
+
+  ['^--- ', ""], # strip a/ b/ git stuff
+  ['^\+\+\+ ', ""], # strip a/ b/ git stuff
+  ['^[ab]/', ""], # strip a/ b/ git stuff
+  ['^ *# *', ''], # comment in rspec/jenkins output
+  ['^/usr/src/app/', ''],
+  ['^/var/web/[^/]*/releases/20[^/]*/', ''],
+
+  # Example transform to change docker container path to host path:
+  ['^/var/web/canvas/shared/bundle/ruby/3.3.0/', '/var/lib/docker/volumes/canvas-lms_canvas-docker-gems/_data/3.3/'],
+  ['\*$', ''],
+]
+
+# This is the default mode. If the first argument to voxide is not present or is an
+# empty string, this config will be used. If the first argument is present, each
+# letter therein is a mode that gets merged onto this base mode.
+[default_mode]
+name = "default mode (no first arg or empty string first arg)"
+desc = "script: filenames (if given), or middle click keyboard (select text); cmd: nvim (file/quickfix) or yazi (dir)"
+script = "voxide-primaryclipboard-or-files"
+cmd = "nvim"
+quickfix_cmd = "nvim -q"
+dir_cmd = "yazi"
+
+# TODO -- make this default with STDIN is piped
+[modes.i]
+name = "stdin"
+desc = "read from stdin"
+script = "cat"
+
+[modes."-"]
+name="pass through output"
+desc="pass through output"
+cmd="voxide-args-to-lines"
+
+[modes.q]
+name="quickfix file from file names"
+desc="useful to apply transforms to a backtrace, e.g. use with 'k'"
+cmd="voxide-args-to-quickfix"
+
+[modes.c]
+name = "config"
+desc = "find a config file in a standard location"
+script = "voxide-config-finder"
+
+[modes.d]
+name = "dev directory"
+desc = "find a directory in ~/dev"
+script = [
+  "bash",
+  "-c",
+  '''
+    if [[ -n "$1" && -e ~/dev/"$1" ]]; then
+      # Exact match exists
+      echo ~/dev/"$1"
+    else
+      d=$( (cd ~/dev && ls -d *"$1"*) | fzf )
+      if [[ -n "$d" && -e ~/dev/"$d" ]]; then
+        echo ~/dev/"$d"
+      else
+        exit 1
+      fi
+    fi
+  ''',
+  'voxide-dev-dir-finder'
+]
+
+
+[modes.x]
+name = "dox"
+desc = "fd . ~/dox | fzf"
+script = ["bash", "-c", "fd . ~/dox"]
+filter=["fzf", "--multi"]
+
+[modes.F]
+name = "fd-fzf"
+desc = "filter results by choosing file(s) from fd search results. can be added on to 'c'"
+filter = ["bash", "-c", 'fd . $(cat)|fzf --multi']
+
+[modes.a]
+name="ag"
+desc = "Choose file(s) from ag search results. This adds the chosen items to the quickfix list"
+script="ag"
+quickfix = true
+filter = ["fzf", "-1", "-m", "--bind", "ctrl-a:select-all,ctrl-d:deselect-all"]
+
+[modes.A]
+name="ag2"
+desc = "Choose file(s) from ag search results. This adds the chosen items to the quickfix list"
+script = "ag"
+quickfix = true
+
+[modes.e]
+name = "echo"
+desc = "echo the output (should be same as '-' but on multiple args on one line [TODO verify])"
+cmd = "echo"
+
+[modes.G]
+name = "gerritquickfix"
+desc = "load quickfix from 'grr c quickfix'"
+script = ["grr", "c", "comments", "-q"]
+quickfix = true
+
+[modes.l]
+name = "remote_l"
+desc = "open in remote vim in current window"
+cmd = "nvr -l"
+
+[modes.R]
+name = "rails routes"
+desc = "jump to controller action, looking up by rails routes"
+script = "voxide-rails-routes.rb"
+quickfix = true
+
+[modes.s]
+name = "screen"
+desc = "get files from zellij screen"
+script = "voxide-zellij-screen-files.rb"
+filter = ["fzf", "-m01", "--reverse", "--bind", "ctrl-a:select-all", "--height=6"]
+
+[modes.k]
+name = "klipboard"
+desc = "open file from clipboard"
+script = "voxide-clipboard-shim"
+
+# [modes.s]
+# name = "split"
+# desc = "open in remote vim split"
+# cmd = "nvr -cc split"
+
+[modes.v]
+name = "vsplit"
+desc = "open in remote vim vertical split"
+cmd = "nvr -cc vsplit"
+
+[modes.w]
+name = "which"
+desc = "open file in PATH"
+script = ["fish", "-c", "type -p $argv", "voxide-which"]
+
+[modes.z]
+name = "zellij"
+desc = "open a file in a new zellig pane"
+cmd = "zellij action edit"
+
+[modes.Z]
+name = "zellij-floating"
+desc = "open a file in a new floating zellig pane"
+cmd = "zellij action edit -f"
+
+[modes.g]
+name = "git-files-numbered"
+desc = "Choose file(s) from git commit/git status, with numbers to choose from. In this mode, any argument given (optional) will be a git ref (e.g. '@^')"
+script_uses_tempfile = true
+script = "voxide-git-files-numbered.rb"
+
+[modes.j]
+name = "voxide-git-files"
+desc = "Choose file(s) from git commit/git status, piped thru FZF. In this mode, any argument given (optional) will be a git ref (e.g. '@^')"
+script = "voxide-git-files"
+filter = [
+  "fzf",
+  "--multi", "-0", # Multiple; exit if no results
+  "--ansi", # Color
+  # search on filename; show second column which is for display
+  "-d", "\t",
+  "--nth", "1",
+  "--with-nth", "2",
+  # Print only the first column (filename) on enter, or if only one
+  # (replaces -1; see https://github.com/junegunn/fzf/discussions/3803)
+  "--bind", 'change:unbind(one),one:become(printf "%s" {+1}),enter:become(printf "%s\n" {+1})',
+  # Select all, deselect all key shortcuts
+  "--bind", "ctrl-a:select-all,ctrl-d:deselect-all"
+]
+
+[modes.p]
+name = "gitjump"
+desc = "jump to a hunk with show-jumper"
+script_uses_tempfile = true
+script = "voxide-show-jumper"
+
+[modes.h]
+name = "history"
+desc = "choose file(s) from vim history in this current directory/git repo"
+script_uses_tempfile = true
+script = "voxide-vim-history-files"
+
+[modes.H]
+name = "history"
+desc = "choose file(s) from vim history (all files in ~/**)"
+script_uses_tempfile = true
+script = ["voxide-vim-history-files", "--home"]
+
+# acronyM or Mnemonic
+[modes.r]
+name = 'rails'
+desc = 'rails r/m/c'
+script = "voxide-rails.rb"
+# TODO: need named filters, or filter scripts
+# Script returns <filename><tab><pretty filename>
+filter = [
+  "fzf",
+  "--multi", "-0", # Multiple; exit if no results
+  "--ansi", # Color
+  # search on filename; show second column which is for display
+  "-d", "\t",
+  # Print only the first column (filename) on enter, or if only one
+  # (replaces -1; see https://github.com/junegunn/fzf/discussions/3803)
+  "--bind", 'change:unbind(one),one:become(printf "%s" {+2}),enter:become(printf "%s\n" {+2})',
+  # Select all, deselect all key shortcuts
+  "--bind", "ctrl-a:select-all,ctrl-d:deselect-all"
+]
+
+# acronyM or Mnemonic
+[modes.m]
+name = 'acronym/mnemoic'
+desc = 'choose file(s) from acronym/mnemonic'
+script = "voxide-file-acronym.rb"
+# TODO: need named filters, or filter scripts
+# Script returns <filename><tab><pretty filename>
+filter = [
+  "fzf",
+  "--multi", "-0", # Multiple; exit if no results
+  "--ansi", # Color
+  # search on filename; show second column which is for display
+  "-d", "\t",
+  # Print only the first column (filename) on enter, or if only one
+  # (replaces -1; see https://github.com/junegunn/fzf/discussions/3803)
+  "--bind", 'change:unbind(one),one:become(printf "%s" {+2}),enter:become(printf "%s\n" {+1})',
+  # Select all, deselect all key shortcuts
+  "--bind", "ctrl-a:select-all,ctrl-d:deselect-all"
+]
+
+[scripts]
+# experimental, maybe no better than just fuzzy find
+find-rails = """
+#!/usr/bin/env bash
+cd $(git rev-parse --show-toplevel)
+type="$1"
+[[ "$type" == "c" ]] && type=controllers
+[[ "$type" == "m" ]] && type=models
+find app/"$type" -type f -name '*.rb' -not -path '*/spec/*' \
+  | grep "${2:-.}" \
+  | fzf --multi -0 -1
+"""
+
+[modes.C]
+name = "rubocop"
+desc = "load quickfix from 'rubocop'"
+script_uses_tempfile = true
+script = "voxide-vim-rubocop"
+quickfix = true
+
+[modes.b]
+name = "background"
+desc = "open in remote vim in background"
+cmd = "voxide-nvr-background.rb"

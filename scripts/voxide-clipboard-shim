@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+
+if which termux-clipboard-get >/dev/null 2>/dev/null; then
+  termux-clipboard-get "$@"
+elif which pbpaste >/dev/null 2>/dev/null; then
+  pbpaste "$@"
+else
+  xclip -selection clipboard -out "$@"
+fi

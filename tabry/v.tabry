@@ -1,0 +1,18 @@
+# For use with [tabry](https://github.com/evanbattaglia/tabry-rs)
+# Experimental and very incomplete exampe tab completion for the modes in the
+# default example config. Put this file in ~/.local/share/tabry/
+
+cmd v
+sub c "load config from ~/.* or ~/config/*" {
+  arg config-name {
+    opts shell "cd && ls -d .* | sed -s 's/^\\.//' | grep -v '~'"
+    opts shell "cd ~/.config/ && ls | grep -v '~'"
+  }
+}
+
+sub w {
+ arg command {
+   opts shell "cd ~/bin && ls && cd ~/bin/instructure && ls && cd ~/bin/aliases && ls && cd ~/bin/text && ls"
+ }
+}
+

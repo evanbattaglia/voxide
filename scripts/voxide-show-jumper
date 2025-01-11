@@ -1,0 +1,51 @@
+#!/usr/bin/bash
+# Choose a hunk with git show (or diff is "diff" argument is provided") and output it
+tmpfn="$1"
+shift
+
+# Embedding a script here is kinda hacky...
+luascript_tmpfn=$(mktemp --suffix=.lua)
+cat > "$luascript_tmpfn" << 'EOF'
+vim.api.nvim_set_keymap('n', '<k>', '?^@@<CR>:noh<CR>', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('n', '<Up>', '?^@@<CR>:noh<CR>', { noremap = true, silent = true })
+
+vim.api.nvim_set_keymap('n', '<j>', '/^@@<CR>:noh<CR>', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('n', '<Down>', '/^@@<CR>:noh<CR>', { noremap = true, silent = true })
+
+vim.api.nvim_set_keymap('n', '<Left>', 'zt', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('n', '<z>', 'zt', { noremap = true, silent = true })
+
+vim.api.nvim_set_keymap('n', 'q', ':q!<CR>', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('n', '<Enter>', '', { noremap = true, silent = true, callback = function()
+   local lineno_line = vim.fn.getline('.')
+   vim.cmd.normal("mm")
+   local filename_line = vim.fn.getline(vim.fn.search('^+++ ', 'b'))
+   vim.cmd.normal("`m")
+
+   local gitrepodir = vim.fn.system("git rev-parse --show-toplevel"):gsub("\n$", "")
+   local filename = filename_line:match("[ab]/(.+)$")
+   local lineno = lineno_line:match("^@@%s%-(%d+)")
+   print(filename)
+
+   vim.cmd("bd!")
+   -- write the result (filename:lineno) to the file.
+   vim.api.nvim_set_current_line(gitrepodir .. "/" .. filename .. ":" .. lineno)
+   vim.cmd("wq")
+end })
+
+function show_jumper()
+  local git_arg = (os.getenv("VIM_SHOW_JUMPER_GIT_ARG") or "@")
+  -- sleep seems to be necessary to get full output before vim sees terminal has stopped and stops writing to buffer or something
+  if git_arg == "diff" then
+    vim.cmd("term bash -cl \"git diff --color=always | cat; sleep 0.1\"")
+  else
+    vim.cmd("term bash -cl \"git show " .. vim.fn.shellescape(git_arg) .. " --color=always | cat; sleep 0.1\"")
+  end
+  vim.cmd("normal! j")
+end
+
+show_jumper()
+EOF
+
+VIM_SHOW_JUMPER_GIT_ARG="${1:-HEAD}" nvim "$tmpfn" "+sou $luascript_tmpfn"
+[[ -s "$tmpfn" ]] || exit 1

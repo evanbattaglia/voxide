@@ -1,0 +1,2 @@
+* change to "locations" -- list out the config file dirs etc.# could be flexible.  would be cool if it could be used with fzf. so probably the way to implement it is "location" acts like a script that looks in those locations and prints out the files it finds.
+* also locations: deep -> list of all files there, must be used with fzf I guess

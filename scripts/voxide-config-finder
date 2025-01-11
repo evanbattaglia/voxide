@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+shopt -s nullglob
+
+# v c
+#    -> show things that could be completed with <v c ...>
+#    -> if there are ~/.fooconfig and ~/.config/foo, show both
+# v c foo
+#    -> find first of ~/.fooconfig, ~/.config/foo/config, etc
+#    -> if doesn't exist, fzf -1 "v c" with "foo" as initial search, choosing first if only 1
+# v c foo -
+#    -> fzf files in foo, like "v cf" does now
+# v c foo bar
+#    -> find first of ~/.fooconfig/bar, ~/.config/foo/bar, etc
+#    -> fzf -1 "~/.fooconfig/*, ~/.config/foo/config/*, etc" starting with "bar"
+#    -> if no matches, but ~/.config/foo etc dir exist, open new file in that dir
+#    -> otherwise, error
+#
+# This could all be generalized into a generic "paths" script.
+# Maybe write in some other language since it's so complicated.
+# Maybe build it into voxide itself (generalizing fzf so it's not a strict dependency)
+#   -> TODO at least, we could probably use with filter (fzf -m01) in voxide 
+
+EXTENSIONS=("" ".json" ".yml" ".yaml" ".toml")
+
+find_all_configs_with_inside_paths_with_fzf() {
+  name="$1"
+  filterstr="$2"
+
+  readarray -t paths < <(
+    cd
+    for i in ".${name}" ".config/${name}/config" ".config/${name}/${name}" ".config/${name}" ".${name}/config" ".${name}config"; do
+      [[ -e "$i" ]] && find -H "$i" -type f -iname "*$filterstr*"
+      # ^ -H -- follow symlinks only in args
+    done | fzf --multi -0 -1 | while read -r line; do
+    echo "$HOME"/"$line"
+  done)
+
+  if [[ -z "$paths" ]]; then
+    for i in "$HOME/.${name}" "$HOME/.config/${name}/config" "$HOME/.config/${name}/${name}" "$HOME/.config/${name}" "$HOME/.${name}/config" "$HOME/.${name}config"; do
+      # Make new file if config dir exists -- e.g. "v c fish waz" -> ~/.config/fish/waz
+      [[ -d "$i" ]] && echo "$HOME"/"$i"/"$filterstr" && return 0
+    done
+    return 1
+  else
+    for i in "${paths[@]}"; do
+      echo $i
+    done
+    return 0
+  fi
+}
+
+find_all_configs_with_fzf() {
+  filterstr=$1
+  # This might be more complicated than necessary
+  # no args -- use fzf
+  readarray -t paths < <(
+    (cd && for i in .* .config/*/config .config/* .config/* .*/config .*config; do
+      printf '%s\n' "$i"
+    done) | sort | uniq | grep -v '^[.]*$' | grep "${filterstr:-.}" | fzf --multi -0 -1 --query "$fzfinitial" | while read -r line; do
+      echo "$HOME"/"$line"
+    done
+  )
+
+  # TODO is this necessary?
+  if [[ -z "$paths" ]]; then
+    return 1
+  else
+    for i in "${paths[@]}"; do
+      echo $i
+    done
+    return 0
+  fi
+}
+
+find_all_using_standard_paths() {
+  name="$1"
+  suffix="$2"
+  findall="$3"
+  found=1
+
+  suffix="$2"
+  if [[ -n "$suffix" ]]; then
+    suffix="/$suffix"
+  fi
+
+  STANDARD_PATHS=("$HOME/.${name}" "$HOME/.config/${name}/config" "$HOME/.config/${name}/${name}" "$HOME/.config/${name}" "$HOME/.${name}/config" "$HOME/.${name}config")
+
+  for path in "${STANDARD_PATHS[@]}"; do
+      for ext in "${EXTENSIONS[@]}"; do
+          if [ -f "${path}${ext}${suffix}" ]; then
+              echo "${path}${ext}${suffix}"
+              found=0
+              [[ -z "$findall" ]] && return 0
+          fi
+      done
+  done
+
+  for path in "${STANDARD_PATHS[@]}"; do
+      for ext in "${EXTENSIONS[@]}"; do
+          if [ -d "${path}${ext}${suffix}" ]; then
+              echo "${path}${ext}${suffix}"
+              found=0
+              [[ -z "$findall" ]] && return 0
+          fi
+      done
+  done
+
+  return $found
+}
+
+find_first_using_standard_paths() {
+  find_all_using_standard_paths "$1" "$2" "" && return 0
+}
+
+run() {
+  local name=$1
+  if [[ "$name" == "-" ]]; then
+    name=""
+  fi
+
+  if [[ -z "$name" ]]; then
+    find_all_configs_with_fzf "$2"
+    return $?
+  fi
+
+  # find_first
+  find_first_using_standard_paths "$name" "$2" && return 0
+
+  if [[ -n "$suffix" ]]; then
+    find_all_configs_with_inside_paths_with_fzf "$name" "$2"
+  else
+    run "" "$name"
+  fi
+}
+
+run "$@"

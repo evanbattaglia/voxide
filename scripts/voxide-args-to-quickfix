@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+tmpfile=$(mktemp)
+
+first_pass=true
+for f in "$@"
+do
+  # if f starts with "+", that print :lineno
+  if [[ $f == "+"* ]]; then
+    printf "%s" ":${f:1}" >> "$tmpfile"
+  elif [[ -n "$first_pass" ]]; then
+    printf "%s" "$f" >> "$tmpfile"
+    first_pass=
+  else
+    printf ":::\n%s" "$f" >> "$tmpfile"
+  fi
+done
+printf ":::" >> "$tmpfile"
+
+vim -q "$tmpfile"

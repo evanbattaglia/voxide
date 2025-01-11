@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+
+# Outputs vim history files under the current directory
+# Usage:
+#   history-files.sh <outputfile> # choose files with fzf, output to <outputfile>
+#   history-files.sh # this outputs all history files (matching current
+#                    # directory/repo) to STDOUT, doesn't use fzf
+
+if [[ "$1" == "--home" ]]; then
+  cd
+  shift
+fi
+
+tmpfile="$1"
+
+
+printf "put =execute('oldfiles')\n%%print\n" | \
+  nvim -es | \
+  sed 's/^[0-9]*: //' | \
+  sed -r 's/^\s+//' | \
+  sed -r 's/\s+$//' | \
+  grep --color=auto . | \
+  grep --color=auto ^"$(git rev-parse --show-toplevel 2>/dev/null || pwd -P)"/ | \
+  sed s@$(pwd -P)/@@ | \
+  grep --color=auto -v COMMIT_EDITMSG | \
+  { while IFS= read -r f; do test -e "$f" && echo "$f"; done; } | \
+  { if [[ -z "$tmpfile" ]]; then cat; else fzf +s -m; fi; } | \
+  { if [[ -z "$tmpfile" ]]; then cat; else tee "$tmpfile" >/dev/null; fi; }
+
+# if tempfile contents empty return 1
+[[ ! -s "$tmpfile" ]] && exit 1
+exit 0
+
