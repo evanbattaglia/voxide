@@ -118,7 +118,7 @@ impl CommandWrapper {
     }
 
     pub fn run(&mut self) -> Result<()> {
-        println!("Running command: {:?}", self.command);
+        debug!("Running command: {:?}", self.command);
         let mut spawned = self.command.spawn().wrap_err("Failed to spawn script")?;
         let res = spawned
             .wait()?
