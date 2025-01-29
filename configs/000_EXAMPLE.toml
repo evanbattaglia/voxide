@@ -108,17 +108,13 @@ quickfix = true
 name = "echo"
 desc = "echo the output (should be same as '-' but on multiple args on one line [TODO verify])"
 cmd = "echo"
+dir_cmd = "echo"
 
 [modes.G]
 name = "gerritquickfix"
 desc = "load quickfix from 'grr c quickfix'"
 script = ["grr", "c", "comments", "-q"]
 quickfix = true
-
-[modes.l]
-name = "remote_l"
-desc = "open in remote vim in current window"
-cmd = "nvr -l"
 
 [modes.R]
 name = "rails routes"
@@ -137,12 +133,29 @@ name = "klipboard"
 desc = "open file from clipboard"
 script = "voxide-clipboard-shim"
 
-# [modes.s]
-# name = "split"
-# desc = "open in remote vim split"
-# cmd = "nvr -cc split"
-
 [modes.v]
+name = "vim remote"
+desc = "open in remote vim (in current window if in neovim terminal)"
+cmd = "nvr"
+
+[modes.l]
+name = "remote_l"
+desc = "open in remote vim in last window (in other window if in neovim terminal)"
+cmd = "nvr -l"
+
+[modes.L]
+name = "remote_L"
+desc = "open in remote vim in last window and quit current window -- for use in voxide.nvim"
+cmd = "nvr -l -cc q"
+dir_cmd = "nvr -l -cc q"
+quickfix_cmd = 'nvr -cc q -q'
+
+[modes.S]
+name = "split"
+desc = "open in remote vim split"
+cmd = "nvr -cc split"
+
+[modes.V]
 name = "vsplit"
 desc = "open in remote vim vertical split"
 cmd = "nvr -cc vsplit"
@@ -151,6 +164,14 @@ cmd = "nvr -cc vsplit"
 name = "which"
 desc = "open file in PATH"
 script = ["fish", "-c", "type -p $argv", "voxide-which"]
+# TODO non-fish version
+##!/usr/bin/env bash
+#if which fish 2>/dev/null
+#  fish -c 'type -p $argv' voxide-which "$@"
+#else
+#  which "$@"
+#fi
+
 
 [modes.z]
 name = "zellij"
@@ -162,13 +183,13 @@ name = "zellij-floating"
 desc = "open a file in a new floating zellig pane"
 cmd = "zellij action edit -f"
 
-[modes.g]
+[modes.j]
 name = "git-files-numbered"
 desc = "Choose file(s) from git commit/git status, with numbers to choose from. In this mode, any argument given (optional) will be a git ref (e.g. '@^')"
 script_uses_tempfile = true
 script = "voxide-git-files-numbered.rb"
 
-[modes.j]
+[modes.g]
 name = "voxide-git-files"
 desc = "Choose file(s) from git commit/git status, piped thru FZF. In this mode, any argument given (optional) will be a git ref (e.g. '@^')"
 script = "voxide-git-files"
@@ -240,7 +261,7 @@ filter = [
   "-d", "\t",
   # Print only the first column (filename) on enter, or if only one
   # (replaces -1; see https://github.com/junegunn/fzf/discussions/3803)
-  "--bind", 'change:unbind(one),one:become(printf "%s" {+2}),enter:become(printf "%s\n" {+1})',
+  "--bind", 'change:unbind(one),one:become(printf "%s" {+2}),enter:become(printf "%s\n" {+2})',
   # Select all, deselect all key shortcuts
   "--bind", "ctrl-a:select-all,ctrl-d:deselect-all"
 ]
