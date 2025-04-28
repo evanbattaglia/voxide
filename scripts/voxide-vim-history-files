@@ -14,8 +14,7 @@ fi
 tmpfile="$1"
 
 
-printf "put =execute('oldfiles')\n%%print\n" | \
-  nvim -es | \
+nvim --headless -c "redir! > /dev/stdout | silent oldfiles | qall!" | \
   sed 's/^[0-9]*: //' | \
   sed -r 's/^\s+//' | \
   sed -r 's/\s+$//' | \
