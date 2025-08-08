@@ -4,6 +4,7 @@ mod init_from_builtin_files;
 mod mode_script_runner;
 mod path_util;
 mod transforms_applicator;
+mod transforms_replacement_preprocessor;
 
 use crate::command_wrapper::CommandWrapper;
 use crate::mode_script_runner::ModeScriptRunner;

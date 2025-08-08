@@ -23,6 +23,8 @@ transforms = [
   # Example transform to change docker container path to host path:
   ['^/var/web/canvas/shared/bundle/ruby/3.3.0/', '/var/lib/docker/volumes/canvas-lms_canvas-docker-gems/_data/3.3/'],
   ['\*$', ''],
+
+  ['^', '${gitroot}/'],
 ]
 
 # This is the default mode. If the first argument to voxide is not present or is an

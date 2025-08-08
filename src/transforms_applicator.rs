@@ -2,6 +2,7 @@ use color_eyre::eyre::Result;
 use log::debug;
 use regex::{Captures, Replacer};
 use std::borrow::Cow;
+use crate::transforms_replacement_preprocessor::process_replacement_string;
 
 pub struct TransformsApplicator<'a> {
     transforms: &'a Vec<(String, String)>,
@@ -47,7 +48,8 @@ impl TransformsApplicator<'_> {
             if !std::path::Path::new(result.as_ref()).exists() {
                 // TODO: cache regexes
                 let r = regex::Regex::new(from)?;
-                let replacer = LinenoCapturingReplacer::new(&mut lineno, to.as_str());
+                let preprocessed_to = process_replacement_string(to);
+                let replacer = LinenoCapturingReplacer::new(&mut lineno, preprocessed_to.as_str());
                 // TODO: don't copy and re-check existence of file if replace_all has not changed anything
                 // for some reason just doing result = r.replace_all(...) isn't working
                 result = Cow::Owned(r.replace_all(&result, replacer).to_string());
