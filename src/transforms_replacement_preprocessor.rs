@@ -1,11 +1,13 @@
 /**
- * Allows us to use ${gitroot} in replacement strings
- * TODO: generalize this to allow other environment variables or placeholders
+ * Allows us to use ${gitroot} and ${home} in replacement strings
+ * TODO: refactor to allow easier generalization to allow other environment variables or placeholders
  */
 
 // get git root from git command, in a Lazy way:
 use std::sync::LazyLock;
 use std::process::Command;
+use log::debug;
+use crate::path_util::home_dir;
 
 static GIT_ROOT: LazyLock<String> = LazyLock::new(|| {
     let output = Command::new("git")
@@ -22,7 +24,8 @@ static GIT_ROOT: LazyLock<String> = LazyLock::new(|| {
             .replace("$", "\\$")
             .to_string()
     } else {
-        panic!("Git command failed with exit status: {:?}", output.status);
+        debug!("Git command failed: {}", String::from_utf8_lossy(&output.stderr));
+        "".to_string()
     }
 });
 
@@ -47,7 +50,7 @@ pub fn process_replacement_string(replacement: &str) -> String {
                             }
                         }
                     } else {
-                        // Not a gitroot sequence, so it's a regular escape
+                        // Not a ${...} sequence, so it's a regular escape
                         result.push(c);
                         result.push(next);
                     }
@@ -57,26 +60,33 @@ pub fn process_replacement_string(replacement: &str) -> String {
             }
             '$' => {
                 if let Some('{') = chars.peek() {
-                    // Peek ahead to see if it's the full "${gitroot}" pattern
+                    // Peek ahead to see if it's the full "${...}" pattern
                     let mut temp_chars = chars.clone();
-                    let mut gitroot_pattern = String::new();
+                    let mut expansion_pattern = String::new();
                     
                     let mut _char_count = 0;
                     
                     while let Some(next_c) = temp_chars.next() {
-                        gitroot_pattern.push(next_c);
+                        expansion_pattern.push(next_c);
                         _char_count += 1;
                         if next_c == '}' {
                             break;
                         }
                     }
                     
-                    if gitroot_pattern.starts_with("{gitroot}") {
+                    if expansion_pattern.starts_with("{gitroot}") {
                         // Consume the characters we just peeked at
-                        for _ in 0..gitroot_pattern.len() {
+                        for _ in 0..expansion_pattern.len() {
                             chars.next();
                         }
                         result.push_str(GIT_ROOT.replace("\\", "\\\\").replace("$", "\\$").as_str());
+                    } else if expansion_pattern.starts_with("{home}") {
+                        for _ in 0..expansion_pattern.len() {
+                            chars.next();
+                        }
+                        if let Ok(home_path) = home_dir() {
+                            result.push_str(home_path.display().to_string().replace("\\", "\\\\").replace("$", "\\$").as_str());
+                        }
                     } else {
                         result.push(c);
                     }
