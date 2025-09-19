@@ -1,6 +1,8 @@
 # These regex replacements are applied to filenames until a file is found that
 # exists.
 transforms = [
+  ['^\s+', ''],
+  ['\s+$', ''],
   ['^file:/+', '/'],
   ["\n", ":"],
   [':File [0-9]+ of.*', ''], # strip gerrit stuff
@@ -24,6 +26,7 @@ transforms = [
   ['^/var/web/canvas/shared/bundle/ruby/3.3.0/', '/var/lib/docker/volumes/canvas-lms_canvas-docker-gems/_data/3.3/'],
   ['\*$', ''],
 
+  ['^~/', '${home}/'],
   ['^', '${gitroot}/'],
 ]
 
@@ -86,7 +89,21 @@ script = [
 name = "dox"
 desc = "fd . ~/dox | fzf"
 script = ["bash", "-c", "fd . ~/dox"]
-filter=["fzf", "--multi"]
+filter=["fzf", "-m01"]
+
+[modes.f]
+name = "fd"
+desc = "fd arg, then pipe into fzf"
+script = [
+  "bash",
+  "-c",
+  """
+    arg="${1:-.}"
+    shift
+    fd "$arg" "$@" | fzf --multi -0 -1
+  """,
+  "voxide-fd-arg-or-stdin"
+]
 
 [modes.F]
 name = "fd-fzf"
@@ -101,9 +118,9 @@ quickfix = true
 filter = ["fzf", "-1", "-m", "--bind", "ctrl-a:select-all,ctrl-d:deselect-all"]
 
 [modes.A]
-name="ag2"
-desc = "Choose file(s) from ag search results. This adds the chosen items to the quickfix list"
-script = "ag"
+name="grep within git commit"
+desc = "Experimental grep within git commit"
+script = "voxide-diff2additionsqf.sh"
 quickfix = true
 
 [modes.e]
@@ -128,7 +145,7 @@ quickfix = true
 name = "screen"
 desc = "get files from zellij screen"
 script = "voxide-zellij-screen-files.rb"
-filter = ["fzf", "-m01", "--reverse", "--bind", "ctrl-a:select-all", "--height=6"]
+filter = ["fzf", "--tac", "--reverse", "--bind", "ctrl-a:select-all", "--height=6"]
 
 [modes.k]
 name = "klipboard"
@@ -219,14 +236,8 @@ script = "voxide-show-jumper"
 [modes.h]
 name = "history"
 desc = "choose file(s) from vim history in this current directory/git repo"
-script_uses_tempfile = true
 script = "voxide-vim-history-files"
-
-[modes.H]
-name = "history"
-desc = "choose file(s) from vim history (all files in ~/**)"
-script_uses_tempfile = true
-script = ["voxide-vim-history-files", "--home"]
+filter = ["fzf", "-m01"]
 
 # acronyM or Mnemonic
 [modes.r]

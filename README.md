@@ -96,8 +96,20 @@ v m bcu
 # Find file by acronym: open `app/controllers/developer_keys_controller.rb`:
 v m APdkcR
 
-# Choose from vim history _filtered to files under current directory_
+# Choose from vim history, filtered to files under current directory
 v h
+
+# Choose from vim history, filtered to files under current directory containing 'foo' in name
+v h
+
+# Choose from vim history filtered to files in home directory and files containing 'foo' in name
+v h ~ foo
+
+# Choose (with fzf) from `fd foo`
+v f foo
+
+# Jump to places in current git commit with string 'SomeFuncIAddedCallsTo'
+v A SomeFuncIAddedCallsTo
 ```
 
 ### Zellij

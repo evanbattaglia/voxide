@@ -2,17 +2,18 @@
 
 # Outputs vim history files under the current directory
 # Usage:
-#   history-files.sh <outputfile> # choose files with fzf, output to <outputfile>
-#   history-files.sh # this outputs all history files (matching current
-#                    # directory/repo) to STDOUT, doesn't use fzf
+#   voxide-vim-history-files # choose from history files in current dir
+#   voxide-vim-history-files ~ # choose from history files in ~
+#   voxide-vim-history-files dir regex # choose from dir, prefilter with regex
 
-if [[ "$1" == "--home" ]]; then
-  cd
+if [[ -n "$1"  && -d "$1" ]]; then
+  dir="$1/"
   shift
+else
+  dir=""
 fi
 
-tmpfile="$1"
-
+ag="${1:-.}"
 
 nvim --headless -c "redir! > /dev/stdout | silent oldfiles | qall!" | \
   sed 's/^[0-9]*: //' | \
@@ -22,11 +23,6 @@ nvim --headless -c "redir! > /dev/stdout | silent oldfiles | qall!" | \
   grep --color=auto ^"$(git rev-parse --show-toplevel 2>/dev/null || pwd -P)"/ | \
   sed s@$(pwd -P)/@@ | \
   grep --color=auto -v COMMIT_EDITMSG | \
-  { while IFS= read -r f; do test -e "$f" && echo "$f"; done; } | \
-  { if [[ -z "$tmpfile" ]]; then cat; else fzf +s -m; fi; } | \
-  { if [[ -z "$tmpfile" ]]; then cat; else tee "$tmpfile" >/dev/null; fi; }
-
-# if tempfile contents empty return 1
-[[ ! -s "$tmpfile" ]] && exit 1
-exit 0
+  ag "$ag" | \
+  { while IFS= read -r f; do test -e "$f" && printf "%s\n" "$dir$f"; done; }
 

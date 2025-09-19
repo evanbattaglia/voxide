@@ -2,13 +2,6 @@
 require 'shellwords'
 require 'tempfile'
 
-# This script:
-# 1. Extracts Rails routes from the Rails app using `rails runner`
-#      assumes rails container running in "web" under docker compose!
-# 2. Saves the routes in a cache file so we don't have to run `rails runner` every time
-# 3. Presents the routes in fzf
-# 4. Opens the controller file in the editor at the action definition
-
 Dir.chdir `git rev-parse --show-toplevel`.chomp
 
 # Service name in docker-compose.yml we use to get routes from Rails (rails runner)

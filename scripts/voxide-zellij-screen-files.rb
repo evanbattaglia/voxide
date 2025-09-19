@@ -29,6 +29,6 @@ Tempfile.open('zelij-screen-files') do |f|
       add_to_set_if_exists(set, match, extra_re)
     end
   end
-  puts set.reverse.to_a.join("\n")
+  puts set.to_a.join("\n")
 end
 
