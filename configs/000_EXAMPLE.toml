@@ -111,9 +111,9 @@ desc = "filter results by choosing file(s) from fd search results. can be added 
 filter = ["bash", "-c", 'fd . $(cat)|fzf --multi']
 
 [modes.a]
-name="ag"
-desc = "Choose file(s) from ag search results. This adds the chosen items to the quickfix list"
-script="ag"
+name="rg"
+desc = "Choose file(s) from rg search results. This adds the chosen items to the quickfix list"
+script=["rg", "--line-number"]
 quickfix = true
 filter = ["fzf", "-1", "-m", "--bind", "ctrl-a:select-all,ctrl-d:deselect-all"]
 
