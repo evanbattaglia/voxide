@@ -51,6 +51,7 @@ script = "cat"
 name="pass through output"
 desc="pass through output"
 cmd="voxide-args-to-lines"
+quickfix=false
 
 [modes.q]
 name="quickfix file from file names"
@@ -113,7 +114,18 @@ filter = ["bash", "-c", 'fd . $(cat)|fzf --multi']
 [modes.a]
 name="rg"
 desc = "Choose file(s) from rg search results. This adds the chosen items to the quickfix list"
-script=["rg", "--line-number"]
+# rg normally prints file:line:col:text. But some rg flags (e.g. -l/--files-with-matches,
+# used for "choose a file, not a line") print bare filenames with no colons at all, which
+# breaks the lineno-extraction transform below. Pad those bare lines into file:1:file so
+# they still parse; leave normal file:line:... output untouched.
+script = [
+  "bash",
+  "-c",
+  """
+    rg --line-number "$@" | awk '{ if ($0 !~ /:/) print $0 ":1:" $0; else print }'
+  """,
+  "voxide-rg"
+]
 quickfix = true
 filter = ["fzf", "-1", "-m", "--bind", "ctrl-a:select-all,ctrl-d:deselect-all"]
 

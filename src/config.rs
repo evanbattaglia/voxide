@@ -56,13 +56,20 @@ impl Mode {
         }
     }
 
-    // Merge other into self, preferring self's values
+    // Merge other into self, preferring self's values. Each field merges independently: a
+    // mode that sets its own quickfix/script_uses_tempfile (e.g. to opt out of quickfix)
+    // keeps that value even if a later-merged mode supplies the script.
     fn reverse_merge(&mut self, other: &Mode) {
         if let (None, Some(other_script)) = (&self.script, &other.script) {
-            // there can be a max of script/script_with_tempfile
             self.script = Some(other_script.clone());
-            self.quickfix = other.quickfix;
-            self.script_uses_tempfile = other.script_uses_tempfile;
+        }
+
+        if let (None, Some(quickfix)) = (&self.quickfix, &other.quickfix) {
+            self.quickfix = Some(*quickfix);
+        }
+
+        if let (None, Some(uses_tempfile)) = (&self.script_uses_tempfile, &other.script_uses_tempfile) {
+            self.script_uses_tempfile = Some(*uses_tempfile);
         }
 
         if let (None, Some(cmd)) = (&self.cmd, &other.cmd) {
