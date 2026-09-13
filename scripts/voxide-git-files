@@ -44,6 +44,20 @@ all = local | index | commit
 all.reject!{|f| !File.exist?("#{root_dir}/#{f}")}
 all.sort_by!{|f| File.mtime("#{root_dir}/#{f}")}.reverse!
 
+# relativize to current working directory
+if root_dir == Dir.pwd
+  relativize = lambda { it }
+else
+  prefix = Dir.pwd.sub(root_dir, '').sub(/^\//, '') + "/"
+  relativize = lambda do |f|
+    if f.start_with?(prefix)
+      f.sub(prefix, '')
+    else
+      "/" + f
+    end
+  end
+end
+
 if (%w[raw --raw -r r] & ARGV).any?
   puts all.join("\n")
   exit 0
@@ -59,7 +73,7 @@ all.each do |f, i|
     ' ',
     commit.include?(f) ? 'com'.green : '   ',
     ' ',
-    f.bold,
+    relativize[f].bold,
   ].join
 end
 
